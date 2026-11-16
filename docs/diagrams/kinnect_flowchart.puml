@@ -1,0 +1,589 @@
+@startuml Kinnect_System_Flowchart
+title Kinnect System Flowchart
+
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontStyle bold
+
+' =====================================================
+' AUTHENTICATION: LOG IN, SIGN UP, ROLE ROUTING
+' =====================================================
+start
+partition "Authentication" {
+:Display Welcome Page;
+if (Has an account?) then (YES)
+  repeat
+    :Enter Email and Password; <<save>>
+    :Validate Credentials;
+    backward:Display Log-in Error; <<save>>
+  repeat while (Credentials Valid?) is (NO) not (YES)
+  :Retrieve saved account role;
+else (NO)
+  repeat
+    :Enter account details and select Professor or Student; <<save>>
+    :Validate sign-up details;
+    backward:Display Sign-up Error; <<save>>
+  repeat while (Details Valid?) is (NO) not (YES)
+  :Create account and save selected role;
+  :Automatically sign in;
+endif
+if (Saved account role?) then (PROFESSOR)
+  (B)
+  detach
+else (STUDENT)
+  if (Already joined a class?) then (YES)
+  else (NO)
+    repeat
+      :Enter class code from professor; <<save>>
+      :Validate class code;
+      backward:Display invalid code message; <<save>>
+    repeat while (Class code valid?) is (NO) not (YES)
+    :Add student to class;
+  endif
+  (D)
+  detach
+endif
+}
+
+' =====================================================
+' B: PROFESSOR DASHBOARD
+' =====================================================
+partition "Professor Dashboard" {
+(B)
+:Display professor dashboard;
+switch (Selected action?)
+case (CREATE CLASS)
+  repeat
+    :Enter class name and details; <<save>>
+    :Validate class details;
+    backward:Display error; <<save>>
+  repeat while (Class details valid?) is (NO) not (YES)
+  :Create class and assign professor as sole owner;
+  :Generate unique class code;
+  :Display class code for sharing; <<save>>
+  (A)
+  detach
+case (OPEN CLASS)
+  if (Has existing classes?) then (YES)
+    :Select an owned class; <<save>>
+    (A)
+    detach
+  else (NO)
+    :Display no classes available; <<save>>
+    (B)
+    detach
+  endif
+case (LOG OUT)
+  (E)
+  detach
+endswitch
+}
+
+' =====================================================
+' A: PROFESSOR CLASS WORKSPACE
+' =====================================================
+partition "Professor Class Workspace" {
+(A)
+:Open professor class workspace;
+switch (Selected class action?)
+case (CREATE GROUP)
+  if (Students available for leader assignment?) then (YES)
+    repeat
+      :Enter group name and details; <<save>>
+      :Select leader from enrolled students; <<save>>
+      :Validate group details and leader selection;
+      backward:Display error; <<save>>
+    repeat while (Details and leader valid?) is (NO) not (YES)
+    :Create group and assign leader;
+    :Display group creation confirmation; <<save>>
+    (A)
+    detach
+  else (NO)
+    :Display no students available; <<save>>
+    (A)
+    detach
+  endif
+case (VIEW GROUP)
+  if (Has existing groups?) then (YES)
+    :Select a group; <<save>>
+    (C)
+    detach
+  else (NO)
+    :Display no groups available; <<save>>
+    (A)
+    detach
+  endif
+case (BACK TO DASHBOARD)
+  (B)
+  detach
+endswitch
+}
+
+' =====================================================
+' C: PROFESSOR GROUP WORKSPACE
+' =====================================================
+partition "Professor Group Workspace" {
+(C)
+:Open group workspace as professor;
+switch (Selected group action?)
+case (VIEW TASK)
+  :Load group task list;
+  :Display tasks, members, deadlines, and statuses; <<save>>
+  (C)
+  detach
+case (VIEW PROGRESS)
+  :Load group tasks;
+  if (Group tasks available?) then (YES)
+    :Calculate group progress;
+    :Display completed, ongoing, and pending task summary; <<save>>
+  else (NO)
+    :Display no tasks yet; <<save>>
+  endif
+  (C)
+  detach
+case (VIEW FILES)
+  :Load group file list;
+  if (Files available?) then (YES)
+    :Select a file; <<save>>
+    :Open or download selected file;
+  else (NO)
+    :Display no files available; <<save>>
+  endif
+  (C)
+  detach
+case (VIEW CALENDAR)
+  (N)
+  detach
+case (VIEW SHARED DOCUMENTS)
+  (O)
+  detach
+case (MESSAGES)
+  (P)
+  detach
+case (BACK TO CLASS)
+  (A)
+  detach
+endswitch
+}
+
+' =====================================================
+' N: PROFESSOR VIEW CALENDAR
+' =====================================================
+partition "Professor: Group Calendar" {
+(N)
+:Load selected group events and task deadlines;
+:Display group calendar and timeline; <<save>>
+-> BACK TO GROUP;
+(C)
+detach
+}
+
+' =====================================================
+' O: PROFESSOR VIEW SHARED DOCUMENTS
+' =====================================================
+partition "Professor: Shared Documents" {
+(O)
+:Load selected group document links;
+if (Document links available?) then (YES)
+  :Select a document; <<save>>
+  :Open document link in browser;
+  -> RETURN TO KINNECT;
+  (C)
+  detach
+else (NO)
+  :Display no shared documents; <<save>>
+  (C)
+  detach
+endif
+}
+
+' =====================================================
+' P: PROFESSOR GROUP MESSAGES
+' =====================================================
+partition "Professor: Group Messages" {
+(P)
+:Load selected group messages;
+:Display group conversation; <<save>>
+switch (Selected messaging action?)
+case (SEND MESSAGE)
+  repeat
+    repeat
+      :Enter message; <<save>>
+      :Validate message;
+      backward:Display invalid message error; <<save>>
+    repeat while (Message valid?) is (NO) not (YES)
+    :Save message with sender, group, and timestamp;
+    backward:Display sending failed message; <<save>>
+  repeat while (Message saved successfully?) is (NO) not (YES)
+  (P)
+  detach
+case (REFRESH CONVERSATION)
+  (P)
+  detach
+case (BACK TO GROUP)
+  (C)
+  detach
+endswitch
+}
+
+' =====================================================
+' D: STUDENT CLASS DASHBOARD
+' =====================================================
+partition "Student Class Dashboard" {
+(D)
+:Open student class dashboard;
+switch (Selected student action?)
+case (OPEN MY GROUP)
+  if (Assigned to a group?) then (YES)
+    :Retrieve role in assigned group;
+    if (Group leader?) then (YES)
+      (F)
+      detach
+    else (NO)
+      (G)
+      detach
+    endif
+  else (NO)
+    :Display awaiting group assignment; <<save>>
+    (D)
+    detach
+  endif
+case (LOG OUT)
+  (E)
+  detach
+endswitch
+}
+
+' =====================================================
+' F: GROUP LEADER WORKSPACE
+' =====================================================
+partition "Group Leader Workspace" {
+(F)
+:Open group leader workspace;
+switch (Selected leader action?)
+case (ADD MEMBER)
+  :Load students from the same class who are not yet in this group;
+  if (Students available to add?) then (YES)
+    repeat
+      :Select students to add; <<save>>
+      :Validate selected students;
+      backward:Display invalid selection message; <<save>>
+    repeat while (Selection valid?) is (NO) not (YES)
+    :Add selected students to the group;
+    :Display members added confirmation; <<save>>
+  else (NO)
+    :Display no students available to add; <<save>>
+  endif
+  (F)
+  detach
+case (CREATE TASK)
+  repeat
+    :Enter task title, description, and deadline; <<save>>
+    :Load group members;
+    :Select assigned member; <<save>>
+    :Validate task details and assigned member;
+    backward:Display validation error; <<save>>
+  repeat while (Task details and assignment valid?) is (NO) not (YES)
+  :Create task with Pending status;
+  :Save task assignment and deadline;
+  :Display task creation confirmation; <<save>>
+  (F)
+  detach
+case (MY TASKS)
+  (M)
+  detach
+case (FILES)
+  (H)
+  detach
+case (CALENDAR/TIMELINE)
+  (I)
+  detach
+case (MESSAGES)
+  (J)
+  detach
+case (SHARED DOCUMENTS)
+  (K)
+  detach
+case (VIEW PROGRESS)
+  (L)
+  detach
+case (BACK TO CLASS)
+  (D)
+  detach
+endswitch
+}
+
+' =====================================================
+' G: GROUP MEMBER WORKSPACE
+' =====================================================
+partition "Group Member Workspace" {
+(G)
+:Open group member workspace;
+switch (Selected member action?)
+case (FILES)
+  (H)
+  detach
+case (CALENDAR/TIMELINE)
+  (I)
+  detach
+case (MESSAGES)
+  (J)
+  detach
+case (SHARED DOCUMENTS)
+  (K)
+  detach
+case (VIEW PROGRESS)
+  (L)
+  detach
+case (MY TASKS)
+  :Load tasks assigned to current member;
+  if (Assigned tasks available?) then (YES)
+    :Display assigned tasks and statuses; <<save>>
+    if (Update a task?) then (YES)
+      repeat
+        :Select an assigned task; <<save>>
+        :Select new status; <<save>>
+        :Validate task ownership and selected status;
+        backward:Display update error; <<save>>
+      repeat while (Update valid?) is (NO) not (YES)
+      :Save task status;
+      :Recalculate group progress;
+      :Display update confirmation; <<save>>
+    else (NO)
+    endif
+  else (NO)
+    :Display no assigned tasks; <<save>>
+  endif
+  (G)
+  detach
+case (BACK TO CLASS)
+  (D)
+  detach
+endswitch
+}
+
+' =====================================================
+' M: GROUP LEADER MY TASKS
+' =====================================================
+partition "Leader: My Tasks" {
+(M)
+:Load tasks assigned to current user;
+if (Assigned tasks available?) then (YES)
+  :Display assigned tasks and statuses; <<save>>
+  if (Update a task?) then (YES)
+    repeat
+      :Select an assigned task; <<save>>
+      :Select new status; <<save>>
+      :Validate task ownership and selected status;
+      backward:Display update error; <<save>>
+    repeat while (Update valid?) is (NO) not (YES)
+    :Save task status;
+    :Recalculate group progress;
+    :Display update confirmation; <<save>>
+  else (NO)
+  endif
+else (NO)
+  :Display no assigned tasks; <<save>>
+endif
+(F)
+detach
+}
+
+' =====================================================
+' H: GROUP FILES (LEADER AND MEMBER)
+' =====================================================
+partition "Group Files" {
+(H)
+:Load current group files;
+:Display file list and file actions; <<save>>
+switch (Selected file action?)
+case (UPLOAD FILE)
+  repeat
+    :Select file to upload; <<save>>
+    :Validate file type and size;
+    backward:Display invalid file message; <<save>>
+  repeat while (File valid?) is (NO) not (YES)
+  :Upload file and save group file record;
+  if (Upload successful?) then (YES)
+    :Display upload confirmation; <<save>>
+  else (NO)
+    :Display upload failed message; <<save>>
+  endif
+  (H)
+  detach
+case (OPEN/DOWNLOAD FILE)
+  if (Files available?) then (YES)
+    :Select a file; <<save>>
+    :Open or download selected file;
+  else (NO)
+    :Display no files available; <<save>>
+  endif
+  (H)
+  detach
+case (BACK TO WORKSPACE)
+  if (Group leader?) then (YES)
+    (F)
+    detach
+  else (NO)
+    (G)
+    detach
+  endif
+endswitch
+}
+
+' =====================================================
+' I: SHARED CALENDAR AND TIMELINE (LEADER AND MEMBER)
+' =====================================================
+partition "Calendar and Timeline" {
+(I)
+:Load group events and task deadlines;
+:Display shared calendar and timeline; <<save>>
+switch (Selected calendar action?)
+case (ADD EVENT)
+  repeat
+    :Enter event title, description, start and end date/time; <<save>>
+    :Validate event details;
+    backward:Display validation error; <<save>>
+  repeat while (Event details valid?) is (NO) not (YES)
+  :Save event to group calendar;
+  :Display event creation confirmation; <<save>>
+  (I)
+  detach
+case (VIEW DETAILS)
+  if (Events or tasks available?) then (YES)
+    :Select an event or task; <<save>>
+    :Display selected item details; <<save>>
+  else (NO)
+    :Display no scheduled items; <<save>>
+  endif
+  (I)
+  detach
+case (BACK TO WORKSPACE)
+  if (Group leader?) then (YES)
+    (F)
+    detach
+  else (NO)
+    (G)
+    detach
+  endif
+endswitch
+}
+
+' =====================================================
+' J: GROUP MESSAGES (LEADER AND MEMBER)
+' =====================================================
+partition "Group Messages" {
+(J)
+:Load current group messages;
+:Display group conversation; <<save>>
+switch (Selected messaging action?)
+case (SEND MESSAGE)
+  repeat
+    repeat
+      :Enter message; <<save>>
+      :Validate message;
+      backward:Display invalid message error; <<save>>
+    repeat while (Message valid?) is (NO) not (YES)
+    :Save message with sender, group, and timestamp;
+    backward:Display sending failed message; <<save>>
+  repeat while (Message saved successfully?) is (NO) not (YES)
+  (J)
+  detach
+case (REFRESH CONVERSATION)
+  (J)
+  detach
+case (BACK TO WORKSPACE)
+  if (Group leader?) then (YES)
+    (F)
+    detach
+  else (NO)
+    (G)
+    detach
+  endif
+endswitch
+}
+
+' =====================================================
+' K: SHARED DOCUMENTS (LEADER AND MEMBER)
+' =====================================================
+partition "Shared Documents" {
+(K)
+:Load group document links;
+:Display shared documents; <<save>>
+switch (Selected document action?)
+case (ADD DOCUMENT LINK)
+  repeat
+    :Enter document title and sharing link; <<save>>
+    :Validate title and link format;
+    backward:Display validation error; <<save>>
+  repeat while (Document details valid?) is (NO) not (YES)
+  :Save document link to group;
+  :Display document added confirmation; <<save>>
+  (K)
+  detach
+case (OPEN DOCUMENT)
+  if (Document links available?) then (YES)
+    :Select a document; <<save>>
+    :Open document link in browser;
+    -> RETURN TO KINNECT;
+    (K)
+    detach
+  else (NO)
+    :Display no shared documents; <<save>>
+    (K)
+    detach
+  endif
+case (BACK TO WORKSPACE)
+  if (Group leader?) then (YES)
+    (F)
+    detach
+  else (NO)
+    (G)
+    detach
+  endif
+endswitch
+}
+
+' =====================================================
+' L: GROUP PROGRESS (LEADER AND MEMBER)
+' =====================================================
+partition "Group Progress" {
+(L)
+:Load all current group tasks;
+if (Group tasks available?) then (YES)
+  :Count pending, ongoing, and completed tasks;
+  :Calculate completion percentage;
+  :Display group progress dashboard; <<save>>
+  if (Selected progress action?) then (REFRESH)
+    (L)
+    detach
+  else (BACK TO WORKSPACE)
+    if (Group leader?) then (YES)
+      (F)
+      detach
+    else (NO)
+      (G)
+      detach
+    endif
+  endif
+else (NO)
+  :Display no tasks yet; <<save>>
+  if (Group leader?) then (YES)
+    (F)
+    detach
+  else (NO)
+    (G)
+    detach
+  endif
+endif
+}
+
+' =====================================================
+' E: LOG OUT
+' =====================================================
+partition "Log Out" {
+(E)
+:End user session;
+stop
+}
+
+@enduml

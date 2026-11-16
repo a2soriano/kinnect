@@ -1,0 +1,166 @@
+@startuml Kinnect_Class_Diagram
+title Kinnect: Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam nodesep 50
+skinparam ranksep 60
+skinparam defaultFontName "Times New Roman"
+skinparam class {
+  BackgroundColor White
+  BorderColor #1E6B52
+  ArrowColor #15302A
+}
+
+' ===================== ROW 1: USERS =====================
+abstract class User {
+  - userId : int
+  - fullName : String
+  - email : String
+  - password : String
+  - role : Role
+  + logIn(email : String, password : String) : boolean
+  + logOut() : void
+  + sendMessage(group : Group, content : String) : Message
+}
+
+enum Role {
+  PROFESSOR
+  STUDENT
+}
+
+' ===================== ROW 2: ROLES =====================
+class Student {
+  + joinClass(classCode : String) : boolean
+  + updateTaskStatus(task : Task, newStatus : TaskStatus) : boolean
+  + uploadFile(group : Group, file : GroupFile) : boolean
+  + addEvent(group : Group, event : CalendarEvent) : boolean
+  + addDocumentLink(group : Group, document : SharedDocument) : boolean
+}
+
+class Professor {
+  + createClass(className : String, details : String) : ClassRoom
+  + createGroup(classRoom : ClassRoom, groupName : String, details : String, leader : Student) : Group
+  + viewGroup(group : Group) : void
+}
+
+' ===================== ROW 3: GROUP AND CLASS =====================
+class Group {
+  - groupId : int
+  - groupName : String
+  - projectDetails : String
+  + isLeader(student : Student) : boolean
+  + addMember(student : Student) : boolean
+  + createTask(title : String, description : String, deadline : LocalDate, assignee : Student) : Task
+  + getProgress() : GroupProgress
+}
+
+class ClassRoom {
+  - classId : int
+  - className : String
+  - details : String
+  - classCode : String
+  + generateClassCode() : String
+  + enrollStudent(student : Student) : void
+  + getStudentsWithoutGroup() : List<Student>
+}
+
+note left of Group
+  Only the group leader can call
+  addMember() and createTask().
+  Both check isLeader() first.
+end note
+
+' ===================== ROW 4: GROUP WORK =====================
+class Task {
+  - taskId : int
+  - title : String
+  - description : String
+  - deadline : LocalDate
+  - status : TaskStatus
+  - assignee : Student
+  + updateStatus(newStatus : TaskStatus) : void
+  + isOverdue() : boolean
+}
+
+class GroupFile {
+  - fileId : int
+  - fileName : String
+  - fileType : String
+  - fileSize : long
+  - uploadedBy : Student
+  - uploadedAt : LocalDateTime
+  + isValidFile() : boolean
+}
+
+class CalendarEvent {
+  - eventId : int
+  - title : String
+  - description : String
+  - startDateTime : LocalDateTime
+  - endDateTime : LocalDateTime
+  - createdBy : Student
+  + isValidTimeRange() : boolean
+}
+
+class Message {
+  - messageId : int
+  - content : String
+  - sender : User
+  - sentAt : LocalDateTime
+  + isValid() : boolean
+}
+
+class SharedDocument {
+  - documentId : int
+  - title : String
+  - link : String
+  - addedBy : Student
+  - addedAt : LocalDateTime
+  + isValidLink() : boolean
+}
+
+class GroupProgress {
+  - completedCount : int
+  - ongoingCount : int
+  - pendingCount : int
+  + getCompletionPercentage() : double
+}
+
+enum TaskStatus {
+  PENDING
+  ONGOING
+  COMPLETED
+}
+
+' ===================== RELATIONSHIPS =====================
+' Inheritance
+User <|-- Student
+User <|-- Professor
+
+' Professor, class, and students
+Professor "1" -- "0..*" ClassRoom : creates >
+Student "0..*" -- "0..*" ClassRoom : joins with code >
+ClassRoom "1" *-- "0..*" Group : contains >
+
+' Group membership
+Student "1" -- "0..*" Group : leads >
+Group "0..*" o-- "1..*" Student : has members >
+
+' Group work
+Group "1" *-- "0..*" Task : has >
+Group "1" *-- "0..*" GroupFile : stores >
+Group "1" *-- "0..*" CalendarEvent : schedules >
+Group "1" *-- "0..*" Message : holds >
+Group "1" *-- "0..*" SharedDocument : keeps >
+Group ..> GroupProgress : computes >
+
+' Layout helpers (invisible)
+User -[hidden]right- Role
+Task -[hidden]down- TaskStatus
+Task -[hidden]right- GroupFile
+GroupFile -[hidden]right- CalendarEvent
+CalendarEvent -[hidden]right- Message
+Message -[hidden]right- SharedDocument
+SharedDocument -[hidden]right- GroupProgress
+
+@enduml
